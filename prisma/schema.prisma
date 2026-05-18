@@ -107,6 +107,8 @@ model Session {
 
   userId String
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("AppSession")
 }
 
 model FamilyMember {
