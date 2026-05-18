@@ -105,6 +105,13 @@ async function refreshApp() {
   revalidatePath("/reports");
 }
 
+async function ensureProductionSchemaCompatibility() {
+  const prisma = getPrisma();
+
+  await prisma.$executeRawUnsafe(`ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'OWNER'`);
+  await prisma.$executeRawUnsafe(`ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'MEMBER'`);
+}
+
 export async function loginAction(formData: FormData) {
   const data = loginSchema.parse(formObject(formData));
   const user = await getPrisma().user.findUnique({ where: { email: data.email.toLowerCase() } });
@@ -120,6 +127,8 @@ export async function loginAction(formData: FormData) {
 export async function registerAction(formData: FormData) {
   const data = registerSchema.parse(formObject(formData));
   const prisma = getPrisma();
+
+  await ensureProductionSchemaCompatibility();
 
   const existing = await prisma.user.findUnique({ where: { email: data.email.toLowerCase() } });
   if (existing) {
