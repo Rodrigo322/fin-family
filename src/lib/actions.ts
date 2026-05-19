@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { createSession, destroySession, hashPassword, requireUser, verifyPassword } from "@/lib/auth";
 import { addMonths, clampDay } from "@/lib/format";
+import { createStarterFamily, ensureProductionSchemaCompatibility } from "@/lib/onboarding";
 import { getPrisma } from "@/lib/prisma";
 import {
   billSchema,
@@ -17,24 +18,6 @@ import {
   memberSchema,
   registerSchema,
 } from "@/lib/validations";
-
-const defaultCategories = [
-  ["Mercado", "#059669", "shopping-cart"],
-  ["Combustivel", "#2563eb", "fuel"],
-  ["Saude", "#dc2626", "heart-pulse"],
-  ["Farmacia", "#7c3aed", "cross"],
-  ["Alimentacao", "#0f766e", "utensils"],
-  ["Casa", "#4f46e5", "home"],
-  ["Criancas", "#0891b2", "smile"],
-  ["Transporte", "#0ea5e9", "bus"],
-  ["Lazer", "#9333ea", "ticket"],
-  ["Dividas", "#b91c1c", "receipt"],
-  ["Educacao", "#475569", "graduation-cap"],
-  ["Internet", "#0284c7", "wifi"],
-  ["Energia", "#ca8a04", "zap"],
-  ["Agua", "#06b6d4", "droplets"],
-  ["Outros", "#64748b", "circle"],
-] as const;
 
 function formObject(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -105,13 +88,6 @@ async function refreshApp() {
   revalidatePath("/reports");
 }
 
-async function ensureProductionSchemaCompatibility() {
-  const prisma = getPrisma();
-
-  await prisma.$executeRawUnsafe(`ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'OWNER'`);
-  await prisma.$executeRawUnsafe(`ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'MEMBER'`);
-}
-
 export async function loginAction(formData: FormData) {
   const data = loginSchema.parse(formObject(formData));
   const user = await getPrisma().user.findUnique({ where: { email: data.email.toLowerCase() } });
@@ -136,62 +112,12 @@ export async function registerAction(formData: FormData) {
   }
 
   const passwordHash = await hashPassword(data.password);
-  const family = await prisma.family.create({ data: { name: data.familyName } });
-  const rodrigo = await prisma.familyMember.create({
-    data: { familyId: family.id, name: data.name, label: "Responsavel", color: "#047857" },
-  });
-  const spouse = await prisma.familyMember.create({
-    data: { familyId: family.id, name: data.spouseName || "Esposa", label: "Co-responsavel", color: "#2563eb" },
-  });
-  const user = await prisma.user.create({
-    data: {
-      name: data.name,
-      email: data.email.toLowerCase(),
-      passwordHash,
-      role: "OWNER",
-      familyId: family.id,
-      profileId: rodrigo.id,
-    },
-  });
-  const incomeCategory = await prisma.category.create({
-    data: { familyId: family.id, name: "Renda", type: "INCOME", color: "#047857", icon: "wallet" },
-  });
-
-  await prisma.category.createMany({
-    data: defaultCategories.map(([name, color, icon]) => ({
-      familyId: family.id,
-      name,
-      type: "EXPENSE" as const,
-      color,
-      icon,
-    })),
-  });
-
-  await prisma.income.createMany({
-    data: [
-      {
-        familyId: family.id,
-        categoryId: incomeCategory.id,
-        responsibleId: rodrigo.id,
-        description: "Rodrigo PJ",
-        value: 5500,
-        type: "FIXED",
-        receivedAt: new Date(),
-        recurring: true,
-        status: "EXPECTED",
-      },
-      {
-        familyId: family.id,
-        categoryId: incomeCategory.id,
-        responsibleId: spouse.id,
-        description: "Bolsa Familia",
-        value: 450,
-        type: "FIXED",
-        receivedAt: new Date(),
-        recurring: true,
-        status: "EXPECTED",
-      },
-    ],
+  const user = await createStarterFamily({
+    name: data.name,
+    email: data.email,
+    passwordHash,
+    familyName: data.familyName,
+    spouseName: data.spouseName,
   });
 
   await createSession(user.id);

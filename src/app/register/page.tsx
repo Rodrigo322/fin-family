@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 
 export default async function RegisterPage(props: PageProps<"/register">) {
   const searchParams = await props.searchParams;
-  const exists = searchParams.error === "exists";
+  const error = Array.isArray(searchParams.error) ? searchParams.error[0] : searchParams.error;
+  const exists = error === "exists";
 
   return (
     <main className="grid min-h-screen place-items-center bg-gradient-to-br from-blue-50 via-white to-emerald-50 px-6 py-10">
@@ -25,6 +26,21 @@ export default async function RegisterPage(props: PageProps<"/register">) {
           </CardDescription>
           {exists ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">Este e-mail ja esta cadastrado.</p> : null}
         </CardHeader>
+        <div className="px-6 pb-4">
+          <Button asChild variant="outline" className="h-12 w-full rounded-xl border-slate-200 bg-white text-base text-slate-800 hover:bg-slate-50">
+            <Link href="/api/auth/google" aria-label="Criar conta usando Google">
+              <span className="flex size-6 items-center justify-center rounded-full bg-white font-semibold text-blue-600 shadow-sm ring-1 ring-slate-200">
+                G
+              </span>
+              Criar com Google
+            </Link>
+          </Button>
+          <div className="mt-4 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-400">
+            <span className="h-px flex-1 bg-slate-200" />
+            ou preencher dados
+            <span className="h-px flex-1 bg-slate-200" />
+          </div>
+        </div>
         <form action={registerAction}>
           <CardContent className="grid gap-5">
             <div className="grid gap-4 md:grid-cols-2">

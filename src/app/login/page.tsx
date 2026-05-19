@@ -10,7 +10,13 @@ import { Label } from "@/components/ui/label";
 
 export default async function LoginPage(props: PageProps<"/login">) {
   const searchParams = await props.searchParams;
-  const error = searchParams.error;
+  const error = Array.isArray(searchParams.error) ? searchParams.error[0] : searchParams.error;
+  const errorMessage =
+    error === "invalid"
+      ? "E-mail ou senha invalidos."
+      : error?.startsWith("google")
+        ? "Nao foi possivel entrar com Google. Confira a configuracao e tente novamente."
+        : null;
 
   return (
     <main className="grid h-dvh overflow-hidden bg-gradient-to-br from-blue-50 via-white to-slate-50 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(520px,1fr)_minmax(380px,520px)] lg:items-center lg:gap-8 lg:px-10 xl:px-24">
@@ -75,8 +81,23 @@ export default async function LoginPage(props: PageProps<"/login">) {
             </div>
             <CardTitle className="text-2xl sm:text-3xl">Bem-vindo de volta</CardTitle>
             <CardDescription>Acesse o seu hub financeiro familiar.</CardDescription>
-            {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">E-mail ou senha invalidos.</p> : null}
+            {errorMessage ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p> : null}
           </CardHeader>
+          <div className="px-5 pb-4 sm:px-8">
+            <Button asChild variant="outline" className="h-12 w-full rounded-xl border-slate-200 bg-white text-base text-slate-800 hover:bg-slate-50">
+              <Link href="/api/auth/google" aria-label="Entrar com sua conta Google">
+                <span className="flex size-6 items-center justify-center rounded-full bg-white font-semibold text-blue-600 shadow-sm ring-1 ring-slate-200">
+                  G
+                </span>
+                Entrar com Google
+              </Link>
+            </Button>
+            <div className="mt-4 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-400">
+              <span className="h-px flex-1 bg-slate-200" />
+              ou
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+          </div>
           <form action={loginAction}>
             <CardContent className="grid gap-4 px-5 sm:px-8">
               <div className="grid gap-2">
